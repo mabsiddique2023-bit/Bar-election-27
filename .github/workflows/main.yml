@@ -13,19 +13,110 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python & Convert Bijoy JSON to Unicode
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Convert voters.json to Clean Bengali Unicode
+      - name: Convert voters.json & Prepare App Icon
         run: |
-          pip install bijoy2unicode
-          cat << 'EOF' > convert.py
-          import json
-          from bijoy2unicode import converter
+          pip install pillow
+          cat << 'EOF' > setup_assets.py
+          import json, os, re
+          from PIL import Image
 
-          conv = converter.Unicode()
+          # Crash-proof Bijoy ANSI to Bengali Unicode Converter
+          def bijoy_to_unicode(text):
+              if not text:
+                  return ""
+              s = str(text)
+              if any('\u0980' <= c <= '\u09FF' for c in s):
+                  return s
+
+              # Preserve English acronyms like A.K.M.
+              acronyms = {}
+              def save_acro(m):
+                  key = f"__ACRO{len(acronyms)}__"
+                  acronyms[key] = m.group(0)
+                  return key
+              s = re.sub(r'\b(?:[A-Z]\.){2,}', save_acro, s)
+
+              # Multi-character & conjunct mappings
+              multi_map = [
+                  ('Av', 'আ'), ('wÎ', 'ত্রি'), ('‡KŠ', 'কৌ'), ('†KŠ', 'কৌ'),
+                  ('‡MŠ', 'গৌ'), ('†MŠ', 'গৌ'), ('‡PŠ', 'চৌ'), ('†PŠ', 'চৌ'),
+                  ('‡mŠ', 'সৌ'), ('†mŠ', 'সৌ'), ('‡bŠ', 'নৌ'), ('†bŠ', 'নৌ'),
+                  ('‡cŠ', 'পৌ'), ('†cŠ', 'পৌ'), ('‡fŠ', 'ভৌ'), ('†fŠ', 'ভৌ'),
+                  ('‡gŠ', 'মৌ'), ('†gŠ', 'মৌ'), ('‡iŠ', 'রৌ'), ('†iŠ', 'রৌ'),
+                  ('‡kŠ', 'শৌ'), ('†kŠ', 'শৌ'), ('‡nŠ', 'হৌ'), ('†nŠ', 'হৌ'),
+                  ('g~j', 'মূল'), ('f~', 'ভূ'), ('m~', 'সূ'), ('c~', 'পূ'), ('k~', 'শূ'),
+                  ('›`', 'ন্দ'), ('š—', 'ন্ত'), ('š‘', 'ন্তু'), ('›U', 'ন্ট'), ('›V', 'ন্ঠ'),
+                  ('Û', 'ন্ড'), ('¤^', 'ম্ব'), ('¤ú', 'ম্প'), ('¤¢', 'ম্ভ'), ('¤§', 'ম্ম'),
+                  ('¤œ', 'ম্ন'), ('¤¬', 'ম্ল'), ('ÿ', 'ক্ষ'), ('¶', 'ক্ষ'), ('Á', 'জ্ঞ'),
+                  ('Â', 'জ্ঞ'), ('°', 'ক্ক'), ('±', 'ক্ট'), ('²', 'ক্ষ'), ('³', 'ক্স'),
+                  ('´', 'গু'), ('µ', 'গ্ধ'), ('·', 'গ্ম'), ('¸', 'গ্ল'), ('¹', 'ঙ্ক'),
+                  ('¼', 'ঙ্গ'), ('¾', 'চ্চ'), ('¿', 'চ্ছ'), ('À', 'জ্জ'), ('Ã', 'ঞ্চ'),
+                  ('Ä', 'ঞ্ছ'), ('Å', 'ঞ্জ'), ('Ç', 'ট্ট'), ('È', 'ড্ড'), ('É', 'ণ্ট'),
+                  ('Ê', 'ণ্ঠ'), ('Ë', 'ণ্ড'), ('Ì', 'ত্ত'), ('Í', 'ত্থ'), ('Î', 'ত্র'),
+                  ('Ï', 'ত্ব'), ('Ð', 'দ্দ'), ('Ñ', 'দ্ধ'), ('Ò', 'দ্ব'), ('Ó', 'দ্ম'),
+                  ('Ô', 'ন্ত'), ('Õ', 'ন্থ'), ('Ö', 'ন্দ'), ('×', 'ন্ধ'), ('Ø', 'ন্ন'),
+                  ('Ù', 'ন্ম'), ('Ú', 'প্ট'), ('Û', 'প্ত'), ('Ü', 'প্ন'), ('Ý', 'প্প'),
+                  ('Þ', 'প্ল'), ('à', 'ব্দ'), ('á', 'ব্ধ'), ('â', 'ব্ব'), ('ã', 'ব্ল'),
+                  ('ä', 'ভ্র'), ('æ', 'ম্প'), ('ç', 'ম্ফ'), ('è', 'ম্ব'), ('é', 'ম্ভ'),
+                  ('ê', 'ম্ম'), ('ë', 'ম্ল'), ('ì', 'ল্ক'), ('í', 'ল্গ'), ('î', 'ল্ট'),
+                  ('ï', 'ল্ড'), ('ð', 'ল্প'), ('ñ', 'ল্ম'), ('ò', 'ল্ল'), ('ó', 'শ্চ'),
+                  ('ô', 'শ্ছ'), ('õ', 'শ্ন'), ('ö', 'শ্ম'), ('÷', 'শ্ল'), ('ø', 'ষ্ক'),
+                  ('ù', 'ষ্ট'), ('ú', 'ষ্ঠ'), ('û', 'ষ্ণ'), ('ü', 'ষ্প'), ('ý', 'ষ্ফ'),
+                  ('þ', 'ষ্ম'), ('¡', 'স্ট'), ('¢', 'স্ত'), ('£', 'স্থ'), ('¤', 'স্ন'),
+                  ('¥', 'স্প'), ('¦', 'স্ফ'), ('§', 'স্ম'), ('«', 'হ্ম'), ('¬', 'হ্ল'),
+                  ('®', 'হৃ'), ('k¦', 'শ্ব'), ('R¡', 'জ্ব'), ('Z¡', 'ত্ব'), ('`¦', 'দ্ব'),
+                  ('a¦', 'ধ্ব'), ('b¦', 'ন্ব'), ('g¦', 'ম্ব'), ('j¦', 'ল্ব'), ('m¦', 'স্ব'),
+                  ('n¦', 'হ্ব'), ('MÖ', 'গ্র'), ('cÖ', 'প্র'), ('eª', 'ব্র'), ('fª', 'ভ্র'),
+                  ('gª', 'ম্র'), ('kª', 'শ্র'), ('mª', 'স্র'), ('`ª', 'দ্র'), ('aª', 'ধ্র'),
+                  ('Uª', 'ট্র'), ('Wª', 'ড্র'), ('K¬', 'ক্ল'), ('M¬', 'গ্ল'), ('c¬', 'প্ল'),
+                  ('e¬', 'ব্ল'), ('k¬', 'শ্ল'), ('m¬', 'স্ল'), ('n¬', 'হ্ল'),
+                  ('K…', 'কৃ'), ('M…', 'গৃ'), ('Z…', 'তৃ'), ('`…', 'দৃ'), ('b…', 'নৃ'),
+                  ('c…', 'পৃ'), ('e…', 'বৃ'), ('f…', 'ভৃ'), ('g…', 'মৃ'), ('k…', 'শৃ'),
+                  ('m…', 'সৃ'), ('n…', 'হৃ'), ('DwÏ', 'উদ্দি'), ('Avn‡g`', 'আহমেদ'),
+                  ('Avng`', 'আহমদ'), ('+gvt', 'মোঃ'), ('†gvt', 'মোঃ'), ('‡gvt', 'মোঃ')
+              ]
+
+              for k, v in multi_map:
+                  s = s.replace(k, v)
+
+              # Reorder pre-base kars (w = ি, ‡/† = ে, ‰ = ৈ)
+              s = re.sub(r'([w‡†‰])([A-Za-z_`|~&ª¨\u0980-\u09FF]+)', r'\2\1', s)
+
+              char_map = {
+                  'A': 'অ', 'B': 'ই', 'C': 'ঈ', 'D': 'উ', 'E': 'ঊ', 'F': 'ঋ',
+                  'G': 'এ', 'H': 'ঐ', 'I': 'ও', 'J': 'ঔ',
+                  'K': 'ক', 'L': 'খ', 'M': 'গ', 'N': 'ঘ', 'O': 'ঙ',
+                  'P': 'চ', 'Q': 'ছ', 'R': 'জ', 'S': 'ঝ', 'T': 'ঞ',
+                  'U': 'ট', 'V': 'ঠ', 'W': 'ড', 'X': 'ঢ', 'Y': 'ণ',
+                  'Z': 'ত', '_': 'থ', '`': 'দ', 'a': 'ধ', 'b': 'ন',
+                  'c': 'প', 'd': 'ফ', 'e': 'ব', 'f': 'ভ', 'g': 'ম',
+                  'h': 'য', 'i': 'র', 'j': 'ল', 'k': 'শ', 'l': 'ষ',
+                  'm': 'স', 'n': 'হ', 'o': 'ড়', 'p': 'ঢ়', 'q': 'য়',
+                  'r': 'ৎ', 's': 'ং', 't': 'ঃ', 'u': 'ঁ',
+                  'v': 'া', 'w': 'ি', 'x': 'ী', 'y': 'ু', 'z': 'ূ',
+                  '~': 'ৃ', '‡': 'ে', '†': 'ে', '‰': 'ৈ', 'Š': 'ৌ',
+                  '&': '্', 'ª': '্র', '¨': '্য', '©': 'র্', '|': '।'
+              }
+
+              out = []
+              for ch in s:
+                  out.append(char_map.get(ch, ch))
+              s = "".join(out)
+
+              # Move reph (র্) before preceding consonant cluster
+              s = re.sub(r'([\u0995-\u09B9\u09DC-\u09DF](?:\u09CD[\u0995-\u09B9\u09DC-\u09DF])*)\u09B0\u09CD', r'র্\1', s)
+
+              # Combine e-kar + aa-kar -> o-kar (ে + া = ো) & e-kar + ou-kar -> ৌ
+              s = s.replace('ো', 'ো').replace('ৌ', 'ৌ')
+
+              for k, v in acronyms.items():
+                  s = s.replace(k, v)
+              return s
 
           with open("voters.json", "r", encoding="utf-8") as f:
               data = json.load(f)
@@ -33,17 +124,32 @@ jobs:
           for row in data:
               for key in ["name", "address"]:
                   if key in row and row[key]:
-                      val = str(row[key])
-                      # Keep pure English abbreviations like A.K.M. intact, convert Bijoy text
-                      if not any('\u0980' <= c <= '\u09FF' for c in val):
-                          row[key] = conv.convertBijoyToUnicode(val)
+                      row[key] = bijoy_to_unicode(row[key])
 
           with open("voters.json", "w", encoding="utf-8") as f:
               json.dump(data, f, ensure_ascii=False, indent=2)
 
-          print("Successfully converted", len(data), "records to Bengali Unicode!")
+          print("Converted", len(data), "records safely!")
+
+          # Generate Custom App Icons if logo.png exists
+          if os.path.exists("logo.png"):
+              img = Image.open("logo.png").convert("RGBA")
+              sizes = {
+                  "mipmap-mdpi": 48,
+                  "mipmap-hdpi": 72,
+                  "mipmap-xhdpi": 96,
+                  "mipmap-xxhdpi": 144,
+                  "mipmap-xxxhdpi": 192
+              }
+              for folder, size in sizes.items():
+                  out_dir = f"app/src/main/res/{folder}"
+                  os.makedirs(out_dir, exist_ok=True)
+                  resized = img.resize((size, size), Image.Resampling.LANCZOS)
+                  resized.save(f"{out_dir}/ic_launcher.png", "PNG")
+                  resized.save(f"{out_dir}/ic_launcher_round.png", "PNG")
+              print("Custom App Icon generated successfully!")
           EOF
-          python convert.py
+          python setup_assets.py
 
       - name: Arrange Android Project Structure
         run: |
