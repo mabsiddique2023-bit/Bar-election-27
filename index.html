@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Voter List 2027</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#f3f6fa;color:#172334;font-family:Arial,'Noto Sans Bengali',sans-serif}
+*{box-sizing:border-box}body{margin:0;background:#f3f6fa;color:#172334;font-family:Arial,sans-serif}
 header{background:#17365d;color:white;padding:22px 18px 18px}h1{font-size:22px;margin:0 0 5px}.sub{opacity:.85;font-size:13px}
 main{padding:14px;max-width:760px;margin:auto}.stat{background:white;border-radius:13px;padding:14px;margin:0 0 12px;box-shadow:0 2px 9px #142b4610}
 .count{font-size:24px;font-weight:bold;color:#176b55}.search{width:100%;padding:14px;border:1px solid #ccd5df;border-radius:10px;font-size:16px;background:white}
@@ -10,59 +10,117 @@ main{padding:14px;max-width:760px;margin:auto}.stat{background:white;border-radi
 .item{background:white;border-radius:12px;padding:14px;margin:9px 0;box-shadow:0 2px 8px #142b4610}.name{font-weight:bold;font-size:16px;margin-bottom:7px}.muted{font-size:13px;color:#536273;line-height:1.6}.phone{color:#087b61;font-weight:bold;display:inline-block;margin-top:4px;text-decoration:none}
 small{color:#607080}.empty{text-align:center;padding:25px;color:#657487}
 </style></head><body>
-<header><h1>ভোটার তালিকা ২০২৭</h1><div class="sub">Offline Voter Directory</div></header>
-<main><div class="stat"><small>মোট রেকর্ড</small><div class="count" id="count">লোড হচ্ছে…</div></div>
-<input id="q" class="search" placeholder="নাম / ঠিকানা / মোবাইল দিয়ে খুঁজুন" autocomplete="off">
-<div class="actions"><button onclick="exportCSV()">CSV Export</button><button onclick="clearSearch()">সব দেখুন</button></div>
+<header><h1>Voter List 2027</h1><div class="sub">Offline Voter Directory</div></header>
+<main><div class="stat"><small>Total Records</small><div class="count" id="count">Loading…</div></div>
+<input id="q" class="search" placeholder="Search by Name / Address / Mobile" autocomplete="off">
+<div class="actions"><button onclick="exportCSV()">CSV Export</button><button onclick="clearSearch()">Show All</button></div>
 <div id="results"></div></main>
 <script>
 let voters=[];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-function bijoyToUni(str) {
+function bijoyToEnglish(str) {
   if (!str) return '';
-  let s = String(str);
-  if (/[\u0980-\u09FF]/.test(s)) return s; // Already Unicode
+  let s = String(str).trim();
 
-  const map = {
-    'Av':'আ','A':'অ','B':'ই','C':'ঈ','D':'উ','E':'ঊ','F':'ঋ','G':'এ','H':'ঐ','I':'ও','J':'ঔ',
-    'K':'ক','L':'খ','M':'গ','N':'ঘ','O':'ঙ','P':'চ','Q':'ছ','R':'জ','S':'ঝ','T':'ঞ',
-    'U':'ট','V':'ঠ','W':'ড','X':'ঢ','Y':'ণ','Z':'ত','_':'থ','`':'দ','a':'ধ','b':'ন',
-    'c':'প','d':'ফ','e':'ব','f':'ভ','g':'ম','h':'য','i':'র','j':'ল','k':'শ','l':'ষ',
-    'm':'স','n':'হ','o':'ড়','p':'ঢ়','q':'য়','r':'ৎ','s':'ং','t':'ঃ','u':'ঁ',
-    'v':'া','w':'ি','x':'ী','y':'ু','z':'ূ','~':'ৃ','‡':'ে','†':'ে','‰':'ৈ','Š':'ৌ',
-    '&':'্','Ö':'্র','ª':'্র','¨':'্য','©':'র্','|':'।',
-    '0':'০','1':'১','2':'২','3':'৩','4':'৪','5':'৫','6':'৬','7':'৭','8':'৮','9':'৯',
-    '°':'ক্ক','±':'ক্ট','²':'ক্ষ','³':'ক্স','´':'গু','µ':'গ্ধ','¶':'গ্ণ','·':'গ্ম','¸':'গ্ল',
-    '¹':'ঙ্ক','º':'ঙ্ক্ষ','»':'ঙ্খ','¼':'ঙ্গ','½':'ঙ্ঘ','¾':'চ্চ','¿':'চ্ছ','À':'জ্জ',
-    'Á':'জ্ঝ','Â':'জ্ঞ','Ã':'ঞ্চ','Ä':'ঞ্ছ','Å':'ঞ্জ','Æ':'ঞ্ঝ','Ç':'ট্ট','È':'ড্ড',
-    'É':'ণ্ট','Ê':'ণ্ঠ','Ë':'ণ্ড','Ì':'ত্ত','Í':'ত্থ','Î':'ত্ম','Ï':'ত্ব','Ð':'দ্দ',
-    'Ñ':'দ্ধ','Ò':'দ্ব','Ó':'দ্ম','Ô':'ন্ত','Õ':'ন্থ','Ö':'ন্দ','×':'ন্ধ','Ø':'ন্ন',
-    'Ù':'ন্ম','Ú':'প্ট','Û':'প্ত','Ü':'প্ন','Ý':'প্প','Þ':'প্ল','ß':'প্স','à':'ব্দ',
-    'á':'ব্ধ','â':'ব্ব','ã':'ব্ল','ä':'ভ্র','å':'ম্ন','æ':'ম্প','ç':'ম্ফ','è':'ম্ব',
-    'é':'ম্ভ','ê':'ম্ম','ë':'ম্ল','ì':'ল্ক','í':'ল্গ','î':'ল্ট','ï':'ল্ড','ð':'ল্প',
-    'ñ':'ল্ম','ò':'ল্ল','ó':'শ্চ','ô':'শ্ছ','õ':'শ্ন','ö':'শ্ম','÷':'শ্ল','ø':'ষ্ক',
-    'ù':'ষ্ট','ú':'ষ্ঠ','û':'ষ্ণ','ü':'ষ্প','ý':'ষ্ফ','þ':'ষ্ম','ÿ':'স্ক','¡':'স্ট',
-    '¢':'স্ত','£':'স্থ','¤':'স্ন','¥':'স্প','¦':'স্ফ','§':'স্ম','«':'হ্ম','¬':'হ্ল','®':'হৃ',
-    'Ï':'ত্ব','wÎ':'ত্রি','Î':'ত্র','Ê':'ণ্ঠ','Ô':'ন্ত','›':'ন্ঠ','œ':'ন্ড','š':'ন্ট','˜':'ন্ধ','—':'ন্দ','–':'ন্থ','•':'ন্ত'
+  // Common legal/location words & abbreviations in Bijoy
+  const commonWords = [
+    [/\+gvt/g, 'Md.'],
+    [/e¸ov/g, 'Bogura'],
+    [/m`i/g, 'Sadar'],
+    [/ev`yoZjv/g, 'Badurtala'],
+    [/R‡jk¦ixZjv/g, 'Jaleswaritola'],
+    [/wkc¦v/g, 'Shibganj'],
+    [/k~Îvczi/g, 'Sutrapur'],
+    [/†kicyi/g, 'Sherpur'],
+    [/BqvKzweqv/g, 'Yakubia'],
+    [/msjMœ/g, 'Adjacent to'],
+    [/gvjwZMi/g, 'Maltinagar'],
+    [/RvgvjMi/g, 'Jamalpur'],
+    [/RvwgjMi/g, 'Jamilnagar'],
+    [/AvdZve/g, 'Aftab'],
+    [/DwÏb/g, 'Uddin'],
+    [/Avn‡g`/g, 'Ahmed'],
+    [/Avng`/g, 'Ahmad'],
+    [/nvwdRyi/g, 'Hafizur'],
+    [/gvneyeyi/g, 'Mahbubur'],
+    [/ingvb/g, 'Rahman'],
+    [/Avãym/g, 'Abdus'],
+    [/mvgv`/g, 'Samad'],
+    [/G\.\+K\.Gg\./g, 'A.K.M.'],
+    [/G\.†K\.Gg\./g, 'A.K.M.'],
+    [/†gv:/g, 'Md.'],
+    [/†gvB`yj/g, 'Moidul'],
+    [/Bmjvg/g, 'Islam'],
+    [/†nvmvBb/g, 'Hossain'],
+    [/†nv‡mb/g, 'Hossen'],
+    [/Avjx/g, 'Ali'],
+    [/Kwig/g, 'Karim'],
+    [/iwng/g, 'Rahim'],
+    [/miKvi/g, 'Sarkar'],
+    [/AvK›`/g, 'Akanda'],
+    [/†PŠayix/g, 'Chowdhury'],
+    [/ZveyK`vi/g, 'Talukder'],
+    [/ZveyK/g, 'Taluk'],
+    [/gÛj/g, 'Mondal'],
+    [/cÖvgvwYK/g, 'Pramanik'],
+    [/wkK`vi/g, 'Sikder'],
+    [/f~Bqv/g, 'Bhuiyan'],
+    [/Lvb/g, 'Khan'],
+    [/wgqv/g, 'Mia'],
+    [/†eMg/g, 'Begum'],
+    [/LvZzb/g, 'Khatun'],
+    [/Av³vi/g, 'Akter'],
+    [/myjZvbv/g, 'Sultana'],
+    [/cÙ-/g, 'Padma-'],
+    [/feb/g, 'Bhaban'],
+    [/†ivW/g, 'Road'],
+    [/cvov/g, 'Para'],
+    [/MÖvg/g, 'Village'],
+    [/WvK/g, 'Post'],
+    [/_vbv/g, 'Thana'],
+    [/†Rjv/g, 'District']
+  ];
+
+  commonWords.forEach(([regex, rep]) => {
+    s = s.replace(regex, rep);
+  });
+
+  // Pre-base kar reordering (w = i, ‡/† = e, ‰ = oi)
+  s = s.replace(/([w‡†‰])([A-Za-z_`|~&ª¨©°-\u00FF]+)/g, '$2$1');
+
+  const charMap = {
+    'Av':'a','A':'a','B':'i','C':'ee','D':'u','E':'u','F':'ri','G':'e','H':'oi','I':'o','J':'ou',
+    'K':'k','L':'kh','M':'g','N':'gh','O':'ng','P':'ch','Q':'chh','R':'j','S':'jh','T':'n',
+    'U':'t','V':'th','W':'d','X':'dh','Y':'n','Z':'t','_':'th','`':'d','a':'dh','b':'n',
+    'c':'p','d':'f','e':'b','f':'bh','g':'m','h':'z','i':'r','j':'l','k':'sh','l':'sh',
+    'm':'s','n':'h','o':'r','p':'rh','q':'y','r':'t','s':'ng','t':'h','u':'n',
+    'v':'a','w':'i','x':'i','y':'u','z':'u','~':'ri','‡':'e','†':'e','‰':'oi','Š':'ou',
+    '&':'','Ö':'r','ª':'r','¨':'y','©':'r','|':'.',
+    '°':'kk','±':'kt','²':'ksh','³':'ks','´':'gu','µ':'gdh','¶':'gn','·':'gm','¸':'gl',
+    '¹':'nk','¼':'ng','¾':'cch','¿':'chh','À':'jj','Â':'gy','Ã':'nch','Å':'nj',
+    'Ç':'tt','È':'dd','É':'nt','Ë':'nd','Ì':'tt','Í':'tth','Î':'tr','Ï':'tw','Ð':'dd',
+    'Ñ':'ddh','Ò':'dw','Ó':'dm','Ô':'nt','Õ':'nth','Ö':'nd','×':'ndh','Ø':'nn',
+    'Ù':'nm','Û':'pt','Ü':'pn','Ý':'pp','Þ':'pl','à':'bd','á':'bdh','â':'bb','ã':'bl',
+    'ä':'bhr','æ':'mp','è':'mb','é':'mbh','ê':'mm','ì':'lk','î':'lt','ï':'ld','ð':'lp',
+    'ò':'ll','ó':'shch','õ':'shn','ö':'shm','ø':'shk','ù':'sht','ú':'shth','û':'shn',
+    'ü':'shp','ÿ':'sk','¡':'st','¢':'st','£':'sth','¤':'sn','¥':'sp','§':'sm','«':'hm',
+    'wÎ':'tri','›':'nth','œ':'nd','š':'nt','˜':'ndh','—':'nd','–':'nth','•':'nt'
   };
 
-  // Pre-base kar reordering (ি, ে, ৈ)
-  s = s.replace(/([w‡†‰])([A-Za-z_`|~&ª¨©°-\u00FF]+)/g, '$2$1');
-  
-  // Replace multi-char and single-char tokens
-  const keys = Object.keys(map).sort((a,b) => b.length - a.length);
+  const keys = Object.keys(charMap).sort((a,b) => b.length - a.length);
   const regex = new RegExp(keys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'g');
-  s = s.replace(regex, m => map[m] || m);
+  s = s.replace(regex, m => charMap[m] ?? m);
 
-  // Fix e-kar + aa-kar -> o-kar (ে + া = ো) and e-kar + ou-kar
-  s = s.replace(/ো/g, 'ো').replace(/ৌ/g, 'ৌ');
+  // Clean up vowel combinations and capitalize words
+  s = s.replace(/ea/g, 'o').replace(/aa/g, 'a').replace(/ii/g, 'i').replace(/uu/g, 'u');
+  s = s.replace(/\b\w/g, c => c.toUpperCase());
   return s;
 }
 
 const origRender = function(list){
   const root=document.getElementById('results');root.innerHTML='';
-  if(!list.length){root.innerHTML='<div class="empty">কোনো তথ্য পাওয়া যায়নি</div>';return}
+  if(!list.length){root.innerHTML='<div class="empty">No records found</div>';return}
   list.forEach(v=>{
     const el=document.createElement('div');el.className='item';
     const cleanPhone = String(v.phone||'').replace(/[^0-9+]/g,'');
@@ -73,30 +131,30 @@ const origRender = function(list){
 
 function render(list){
   const converted = list.map(v => ({
-    serial: bijoyToUni(v.serial),
-    name: bijoyToUni(v.name),
-    address: bijoyToUni(v.address),
+    serial: v.serial,
+    name: bijoyToEnglish(v.name),
+    address: bijoyToEnglish(v.address),
     phone: v.phone
   }));
   origRender(converted);
 }
 
-fetch('voters.json').then(r=>r.json()).then(d=>{voters=d;document.getElementById('count').textContent=d.length+' জন';render(d.slice(0,100));});
+fetch('voters.json').then(r=>r.json()).then(d=>{voters=d;document.getElementById('count').textContent=d.length+' Voters';render(d.slice(0,100));});
 
 document.getElementById('q').addEventListener('input',e=>{
   const q=e.target.value.trim().toLowerCase();
   if(!q){render(voters.slice(0,100));return}
   const found=voters.filter(v=>{
-    const uName = bijoyToUni(v.name).toLowerCase();
-    const uAddr = bijoyToUni(v.address).toLowerCase();
-    return [v.serial, v.name, v.address, uName, uAddr, v.phone].some(x=>String(x).toLowerCase().includes(q));
+    const eName = bijoyToEnglish(v.name).toLowerCase();
+    const eAddr = bijoyToEnglish(v.address).toLowerCase();
+    return [v.serial, v.name, v.address, eName, eAddr, v.phone].some(x=>String(x).toLowerCase().includes(q));
   });
   render(found.slice(0,300));
 });
 function clearSearch(){document.getElementById('q').value='';render(voters.slice(0,100))}
 function exportCSV(){
-  const lines=[['ক্রমিক','নাম','ঠিকানা','মোবাইল'],...voters.map(v=>[bijoyToUni(v.serial),bijoyToUni(v.name),bijoyToUni(v.address),v.phone])];
+  const lines=[['Serial','Name','Address','Mobile'],...voters.map(v=>[v.serial,bijoyToEnglish(v.name),bijoyToEnglish(v.address),v.phone])];
   const csv='\ufeff'+lines.map(r=>r.map(x=>'"'+String(x??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='Voter-List-2027.csv';a.click();URL.revokeObjectURL(a.href);
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='Voter-List-2027-English.csv';a.click();URL.revokeObjectURL(a.href);
 }
 </script></body></html>
