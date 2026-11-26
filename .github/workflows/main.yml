@@ -13,6 +13,38 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Python & Convert Bijoy JSON to Unicode
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Convert voters.json to Clean Bengali Unicode
+        run: |
+          pip install bijoy2unicode
+          cat << 'EOF' > convert.py
+          import json
+          from bijoy2unicode import converter
+
+          conv = converter.Unicode()
+
+          with open("voters.json", "r", encoding="utf-8") as f:
+              data = json.load(f)
+
+          for row in data:
+              for key in ["name", "address"]:
+                  if key in row and row[key]:
+                      val = str(row[key])
+                      # Keep pure English abbreviations like A.K.M. intact, convert Bijoy text
+                      if not any('\u0980' <= c <= '\u09FF' for c in val):
+                          row[key] = conv.convertBijoyToUnicode(val)
+
+          with open("voters.json", "w", encoding="utf-8") as f:
+              json.dump(data, f, ensure_ascii=False, indent=2)
+
+          print("Successfully converted", len(data), "records to Bengali Unicode!")
+          EOF
+          python convert.py
+
       - name: Arrange Android Project Structure
         run: |
           mkdir -p app/src/main/java/com/voterlist/app
