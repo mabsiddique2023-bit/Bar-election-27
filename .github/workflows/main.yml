@@ -25,7 +25,6 @@ jobs:
           import json, os, re
           from PIL import Image
 
-          # Crash-proof Bijoy ANSI to Bengali Unicode Converter
           def bijoy_to_unicode(text):
               if not text:
                   return ""
@@ -33,7 +32,6 @@ jobs:
               if any('\u0980' <= c <= '\u09FF' for c in s):
                   return s
 
-              # Preserve English acronyms like A.K.M.
               acronyms = {}
               def save_acro(m):
                   key = f"__ACRO{len(acronyms)}__"
@@ -41,20 +39,21 @@ jobs:
                   return key
               s = re.sub(r'\b(?:[A-Z]\.){2,}', save_acro, s)
 
-              # Multi-character & conjunct mappings
               multi_map = [
-                  ('Av', 'আ'), ('wÎ', 'ত্রি'), ('‡KŠ', 'কৌ'), ('†KŠ', 'কৌ'),
-                  ('‡MŠ', 'গৌ'), ('†MŠ', 'গৌ'), ('‡PŠ', 'চৌ'), ('†PŠ', 'চৌ'),
-                  ('‡mŠ', 'সৌ'), ('†mŠ', 'সৌ'), ('‡bŠ', 'নৌ'), ('†bŠ', 'নৌ'),
-                  ('‡cŠ', 'পৌ'), ('†cŠ', 'পৌ'), ('‡fŠ', 'ভৌ'), ('†fŠ', 'ভৌ'),
-                  ('‡gŠ', 'মৌ'), ('†gŠ', 'মৌ'), ('‡iŠ', 'রৌ'), ('†iŠ', 'রৌ'),
-                  ('‡kŠ', 'শৌ'), ('†kŠ', 'শৌ'), ('‡nŠ', 'হৌ'), ('†nŠ', 'হৌ'),
-                  ('g~j', 'মূল'), ('f~', 'ভূ'), ('m~', 'সূ'), ('c~', 'পূ'), ('k~', 'শূ'),
+                  ('e¸ov', 'বগুড়া'), ('Av', 'আ'), ('wÎ', 'ত্রি'),
+                  ('‡KŠ', 'কৌ'), ('†KŠ', 'কৌ'), ('‡MŠ', 'গৌ'), ('†MŠ', 'গৌ'),
+                  ('‡PŠ', 'চৌ'), ('†PŠ', 'চৌ'), ('‡mŠ', 'সৌ'), ('†mŠ', 'সৌ'),
+                  ('‡bŠ', 'নৌ'), ('†bŠ', 'নৌ'), ('‡cŠ', 'পৌ'), ('†cŠ', 'পৌ'),
+                  ('‡fŠ', 'ভৌ'), ('†fŠ', 'ভৌ'), ('‡gŠ', 'মৌ'), ('†gŠ', 'মৌ'),
+                  ('‡iŠ', 'রৌ'), ('†iŠ', 'রৌ'), ('‡kŠ', 'শৌ'), ('†kŠ', 'শৌ'),
+                  ('‡nŠ', 'হৌ'), ('†nŠ', 'হৌ'), ('g~j', 'মূল'),
+                  ('f~', 'ভূ'), ('m~', 'সূ'), ('c~', 'পূ'), ('k~', 'শূ'),
                   ('›`', 'ন্দ'), ('š—', 'ন্ত'), ('š‘', 'ন্তু'), ('›U', 'ন্ট'), ('›V', 'ন্ঠ'),
+                  ('¯—', 'ক্ত'), ('¯’', 'স্থ'), ('¯‹', 'স্ক'), ('¯^', 'স্ব'), ('¯', 'ক্ত'),
                   ('Û', 'ন্ড'), ('¤^', 'ম্ব'), ('¤ú', 'ম্প'), ('¤¢', 'ম্ভ'), ('¤§', 'ম্ম'),
                   ('¤œ', 'ম্ন'), ('¤¬', 'ম্ল'), ('ÿ', 'ক্ষ'), ('¶', 'ক্ষ'), ('Á', 'জ্ঞ'),
                   ('Â', 'জ্ঞ'), ('°', 'ক্ক'), ('±', 'ক্ট'), ('²', 'ক্ষ'), ('³', 'ক্স'),
-                  ('´', 'গু'), ('µ', 'গ্ধ'), ('·', 'গ্ম'), ('¸', 'গ্ল'), ('¹', 'ঙ্ক'),
+                  ('´', 'গু'), ('µ', 'গ্ধ'), ('·', 'গ্ম'), ('¸', 'গু'), ('¹', 'ঙ্ক'),
                   ('¼', 'ঙ্গ'), ('¾', 'চ্চ'), ('¿', 'চ্ছ'), ('À', 'জ্জ'), ('Ã', 'ঞ্চ'),
                   ('Ä', 'ঞ্ছ'), ('Å', 'ঞ্জ'), ('Ç', 'ট্ট'), ('È', 'ড্ড'), ('É', 'ণ্ট'),
                   ('Ê', 'ণ্ঠ'), ('Ë', 'ণ্ড'), ('Ì', 'ত্ত'), ('Í', 'ত্থ'), ('Î', 'ত্র'),
@@ -84,7 +83,6 @@ jobs:
               for k, v in multi_map:
                   s = s.replace(k, v)
 
-              # Reorder pre-base kars (w = ি, ‡/† = ে, ‰ = ৈ)
               s = re.sub(r'([w‡†‰])([A-Za-z_`|~&ª¨\u0980-\u09FF]+)', r'\2\1', s)
 
               char_map = {
@@ -108,10 +106,7 @@ jobs:
                   out.append(char_map.get(ch, ch))
               s = "".join(out)
 
-              # Move reph (র্) before preceding consonant cluster
               s = re.sub(r'([\u0995-\u09B9\u09DC-\u09DF](?:\u09CD[\u0995-\u09B9\u09DC-\u09DF])*)\u09B0\u09CD', r'র্\1', s)
-
-              # Combine e-kar + aa-kar -> o-kar (ে + া = ো) & e-kar + ou-kar -> ৌ
               s = s.replace('ো', 'ো').replace('ৌ', 'ৌ')
 
               for k, v in acronyms.items():
@@ -129,9 +124,6 @@ jobs:
           with open("voters.json", "w", encoding="utf-8") as f:
               json.dump(data, f, ensure_ascii=False, indent=2)
 
-          print("Converted", len(data), "records safely!")
-
-          # Generate Custom App Icons if logo.png exists
           if os.path.exists("logo.png"):
               img = Image.open("logo.png").convert("RGBA")
               sizes = {
@@ -147,7 +139,6 @@ jobs:
                   resized = img.resize((size, size), Image.Resampling.LANCZOS)
                   resized.save(f"{out_dir}/ic_launcher.png", "PNG")
                   resized.save(f"{out_dir}/ic_launcher_round.png", "PNG")
-              print("Custom App Icon generated successfully!")
           EOF
           python setup_assets.py
 
